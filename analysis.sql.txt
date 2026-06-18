@@ -1,0 +1,123 @@
+-- 1. Average price by city
+
+SELECT city,
+       ROUND(AVG(realsum), 2) AS avg_price_eur
+FROM listings
+GROUP BY city
+ORDER BY avg_price_eur DESC;
+
+-- 2. Weekend vs weekday price premium
+
+SELECT city,
+       ROUND(AVG(CASE WHEN day_type = 'weekends' THEN realsum END), 2) AS weekend_avg,
+       ROUND(AVG(CASE WHEN day_type = 'weekdays' THEN realsum END), 2) AS weekday_avg,
+       ROUND((AVG(CASE WHEN day_type = 'weekends' THEN realsum END) /
+              AVG(CASE WHEN day_type = 'weekdays' THEN realsum END) - 1) * 100, 1) AS premium_pct
+FROM listings
+GROUP BY city
+ORDER BY premium_pct DESC;
+
+-- 3. Average price by room type
+
+SELECT room_type,
+       ROUND(AVG(realsum), 2) AS avg_price_eur,
+       COUNT(*) AS listing_count
+FROM listings
+GROUP BY room_type
+ORDER BY avg_price_eur DESC;
+
+-- 4. Superhost premium
+
+SELECT city,
+       ROUND(AVG(CASE WHEN host_is_superhos = 'True' THEN realsum END), 2) AS superhost_avg,
+       ROUND(AVG(CASE WHEN host_is_superhos = 'False' THEN realsum END), 2) AS regular_avg,
+       ROUND((AVG(CASE WHEN host_is_superhos = 'True' THEN realsum END) /
+              AVG(CASE WHEN host_is_superhos = 'False' THEN realsum END) - 1) * 100, 1) AS premium_pct
+FROM listings
+GROUP BY city
+ORDER BY premium_pct DESC;
+
+-- 5. Price vs distance buckets
+
+SELECT 
+    CASE 
+        WHEN dist < 1 THEN '0-1 km'
+        WHEN dist < 3 THEN '1-3 km'
+        WHEN dist < 5 THEN '3-5 km'
+        WHEN dist < 10 THEN '5-10 km'
+        ELSE '10+ km'
+    END AS distance_bucket,
+    ROUND(AVG(realsum), 2) AS avg_price_eur,
+    COUNT(*) AS listing_count
+FROM listings
+GROUP BY distance_bucket
+ORDER BY MIN(dist);
+
+-- 6. Guest satisfaction by city
+
+SELECT city,
+       ROUND(AVG(guest_satisfacti), 1) AS avg_satisfaction,
+       COUNT(*) AS listing_count
+FROM listings
+GROUP BY city
+ORDER BY avg_satisfaction DESC;
+
+-- 7. Best value cities (satisfaction per euro)
+
+SELECT city,
+       ROUND(AVG(guest_satisfacti), 1) AS avg_satisfaction,
+       ROUND(AVG(realsum), 2) AS avg_price_eur,
+       ROUND(AVG(guest_satisfacti) / AVG(realsum) * 100, 2) AS value_score
+FROM listings
+GROUP BY city
+ORDER BY value_score DESC;
+
+-- 8. Bedroom price breakdown
+
+SELECT bedrooms,
+       ROUND(AVG(realsum), 2) AS avg_price_eur,
+       COUNT(*) AS listing_count
+FROM listings
+GROUP BY bedrooms
+ORDER BY bedrooms;
+
+-- 9. Listings with coordinates for map visualisation
+
+SELECT 
+    city,
+    room_type,
+    realsum AS price_eur,
+    guest_satisfacti AS satisfaction,
+    cleanliness_rati AS cleanliness,
+    dist AS dist_city_centre,
+    metro_dist,
+    host_is_superhos,
+    bedrooms,
+    lat,
+    lng
+FROM listings
+WHERE lat IS NOT NULL 
+  AND lng IS NOT NULL;
+
+-- 10. Top 10% most expensive listings per city
+
+SELECT city,
+       room_type,
+       realsum AS price_eur,
+       guest_satisfacti AS satisfaction,
+       cleanliness_rati AS cleanliness,
+       bedrooms,
+       dist AS dist_city_centre,
+       host_is_superhos,
+       lat,
+       lng,
+       NTILE(10) OVER (PARTITION BY city ORDER BY realsum DESC) AS price_decile
+FROM listings
+WHERE NTILE(10) OVER (PARTITION BY city ORDER BY realsum DESC) = 1;
+
+-- 11. Count of Listings
+
+SELECT city, COUNT(*) AS listing_count
+FROM airbnb
+GROUP BY city
+ORDER BY listing_count ASC;
